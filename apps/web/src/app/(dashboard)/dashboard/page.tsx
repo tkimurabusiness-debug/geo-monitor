@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { PageHeader } from "@/components/layout";
 import { Card, CardTitle, Badge, PlatformIcon } from "@/components/ui";
 import { cn } from "@/lib/utils";
@@ -45,13 +46,62 @@ const platformLines: Array<{ key: AIPlatform; color: string }> = [
   { key: "deepseek", color: PLATFORM_META.deepseek.color },
 ];
 
+const DEFAULT_PLATFORMS: AIPlatform[] = ["chatgpt", "gemini", "claude"];
+
 export default function DashboardPage() {
+  const [activePlatforms, setActivePlatforms] = useState<Set<AIPlatform>>(
+    new Set(DEFAULT_PLATFORMS),
+  );
+
+  function togglePlatform(p: AIPlatform) {
+    setActivePlatforms((prev) => {
+      const next = new Set(prev);
+      if (next.has(p)) next.delete(p);
+      else next.add(p);
+      return next;
+    });
+  }
+
+  const visibleLines = platformLines.filter((p) => activePlatforms.has(p.key));
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="ダッシュボード"
         description="GEOモニタリングの概要"
       />
+
+      {/* AI Platform Selector */}
+      <Card padding="sm">
+        <div className="flex items-center gap-4 flex-wrap">
+          <span className="text-sm font-medium text-text-secondary">表示AI:</span>
+          {platformLines.map((p) => {
+            const meta = PLATFORM_META[p.key];
+            const checked = activePlatforms.has(p.key);
+            return (
+              <label
+                key={p.key}
+                className={cn(
+                  "inline-flex items-center gap-2 rounded-lg border px-3 py-2 cursor-pointer transition-all",
+                  checked
+                    ? "border-current bg-opacity-10"
+                    : "border-border opacity-40 hover:opacity-70",
+                )}
+                style={checked ? { borderColor: meta.color, backgroundColor: meta.color + "10" } : undefined}
+              >
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => togglePlatform(p.key)}
+                  className="sr-only"
+                />
+                <PlatformIcon platform={p.key} size="sm" />
+                <span className="text-sm font-medium">{meta.label}</span>
+              </label>
+            );
+          })}
+        </div>
+      </Card>
 
       {/* ── KPI Cards ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -87,7 +137,7 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between mb-4">
             <CardTitle>AI検索スコア推移（30日）</CardTitle>
             <div className="flex flex-wrap gap-2">
-              {platformLines.map((p) => (
+              {visibleLines.map((p) => (
                 <PlatformIcon
                   key={p.key}
                   platform={p.key}
@@ -121,7 +171,7 @@ export default function DashboardPage() {
                   boxShadow: "0 4px 6px -1px rgba(0,0,0,0.07)",
                 }}
               />
-              {platformLines.map((p) => (
+              {visibleLines.map((p) => (
                 <Line
                   key={p.key}
                   type="monotone"
@@ -273,7 +323,7 @@ export default function DashboardPage() {
                 <th className="px-3 py-2.5 text-right text-xs font-medium text-text-muted uppercase tracking-wider">
                   変動
                 </th>
-                {platformLines.map((p) => (
+                {visibleLines.map((p) => (
                   <th
                     key={p.key}
                     className="px-2 py-2.5 text-center"
@@ -305,7 +355,7 @@ export default function DashboardPage() {
                   <td className="px-3 py-3 text-right">
                     <TrendBadge value={kw.trend} />
                   </td>
-                  {platformLines.map((p) => {
+                  {visibleLines.map((p) => {
                     const rank =
                       kw.platforms[p.key as keyof typeof kw.platforms];
                     return (
@@ -342,7 +392,7 @@ export default function DashboardPage() {
           プラットフォーム別サマリ
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          {mockRadarData.map((d) => {
+          {mockRadarData.filter((d) => activePlatforms.has(d.platform.toLowerCase() as AIPlatform)).map((d) => {
             const pKey = d.platform.toLowerCase() as AIPlatform;
             return (
               <Card key={d.platform} padding="sm" className="text-center">
