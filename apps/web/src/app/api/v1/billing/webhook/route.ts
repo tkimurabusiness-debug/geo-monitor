@@ -3,13 +3,17 @@ import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? "", {
-  apiVersion: "2026-02-25.clover",
-});
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET ?? "";
+function getStripe() {
+  return new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2026-02-25.clover" });
+}
 
 /** POST /api/v1/billing/webhook — Stripe webhook handler */
 export async function POST(req: Request) {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    return NextResponse.json({ error: "Stripe not configured" }, { status: 501 });
+  }
+  const stripe = getStripe();
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET ?? "";
   const body = await req.text();
   const sig = req.headers.get("stripe-signature") ?? "";
 

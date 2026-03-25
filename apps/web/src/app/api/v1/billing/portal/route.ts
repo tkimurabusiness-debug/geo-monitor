@@ -3,12 +3,14 @@ import { authenticate, getOrgSupabase } from "../../_lib/auth";
 import { success, withErrorHandling } from "../../_lib/response";
 import { Errors } from "../../_lib/errors";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? "", {
-  apiVersion: "2026-02-25.clover",
-});
+function getStripe() {
+  return new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2026-02-25.clover" });
+}
 
 /** POST /api/v1/billing/portal — Create Stripe Customer Portal session */
 export const POST = withErrorHandling(async (req) => {
+  if (!process.env.STRIPE_SECRET_KEY) throw Errors.badRequest("Stripe未設定");
+  const stripe = getStripe();
   const auth = await authenticate(req);
   const supabase = await getOrgSupabase();
 

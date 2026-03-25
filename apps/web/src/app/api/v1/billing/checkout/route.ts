@@ -4,9 +4,9 @@ import { success, withErrorHandling } from "../../_lib/response";
 import { parseBody, requireFields } from "../../_lib/validate";
 import { Errors } from "../../_lib/errors";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? "", {
-  apiVersion: "2026-02-25.clover",
-});
+function getStripe() {
+  return new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2026-02-25.clover" });
+}
 
 /** Price IDs per plan — set in Stripe Dashboard */
 const PLAN_PRICES: Record<string, string> = {
@@ -17,6 +17,8 @@ const PLAN_PRICES: Record<string, string> = {
 
 /** POST /api/v1/billing/checkout — Create Stripe Checkout session */
 export const POST = withErrorHandling(async (req) => {
+  if (!process.env.STRIPE_SECRET_KEY) throw Errors.badRequest("Stripe未設定");
+  const stripe = getStripe();
   const auth = await authenticate(req);
   const body = await parseBody<{ plan: string }>(req);
   requireFields(body, ["plan"]);
