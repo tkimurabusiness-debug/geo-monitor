@@ -5,21 +5,38 @@ import { PageHeader } from "@/components/layout";
 import { Card, CardTitle, Badge, Button, Input, Dialog } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { Plus, Globe, ExternalLink } from "lucide-react";
+import { useFetch, useMutation } from "@/hooks/use-fetch";
+import { formatDate } from "@/lib/utils/format";
 
-const mockSites = [
+interface SiteData {
+  id: string;
+  url: string;
+  name: string | null;
+  geo_score: number | null;
+  readiness_score: number | null;
+  last_diagnosed_at: string | null;
+  created_at: string;
+}
+
+const mockSites: SiteData[] = [
   {
     id: "site1",
     url: "https://stock-value.co.jp",
     name: "Stock Value コーポレートサイト",
-    geoScore: 82,
-    readinessScore: 85,
-    keywords: 50,
-    lastDiagnosed: "2026-03-20",
+    geo_score: 82,
+    readiness_score: 85,
+    last_diagnosed_at: "2026-03-20T00:00:00Z",
+    created_at: "2026-01-15T00:00:00Z",
   },
 ];
 
 export default function SitesPage() {
+  const { data: sitesData, refetch } = useFetch<SiteData[]>("/sites", mockSites);
+  const sites = Array.isArray(sitesData) ? sitesData : mockSites;
   const [showAdd, setShowAdd] = useState(false);
+  const [newUrl, setNewUrl] = useState("");
+  const [newName, setNewName] = useState("");
+  const { mutate: addSite, loading: addLoading } = useMutation<{ url: string; name?: string }>("post", "/sites");
 
   return (
     <div className="space-y-6">
@@ -35,7 +52,7 @@ export default function SitesPage() {
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {mockSites.map((site) => (
+        {sites.map((site) => (
           <Card key={site.id}>
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-center gap-2">
@@ -43,7 +60,7 @@ export default function SitesPage() {
                   <Globe size={18} className="text-accent" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-semibold text-text-primary">{site.name}</h3>
+                  <h3 className="text-sm font-semibold text-text-primary">{site.name || site.url}</h3>
                   <a href={site.url} target="_blank" rel="noopener noreferrer" className="text-xs text-accent hover:underline flex items-center gap-1">
                     {site.url} <ExternalLink size={10} />
                   </a>
@@ -51,23 +68,19 @@ export default function SitesPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-3 mt-4">
+            <div className="grid grid-cols-2 gap-3 mt-4">
               <div>
                 <p className="text-[10px] text-text-muted uppercase">GEOスコア</p>
-                <p className="text-lg font-bold font-mono text-text-primary">{site.geoScore}</p>
+                <p className="text-lg font-bold font-mono text-text-primary">{site.geo_score ?? "—"}</p>
               </div>
               <div>
                 <p className="text-[10px] text-text-muted uppercase">Readiness</p>
-                <p className="text-lg font-bold font-mono text-text-primary">{site.readinessScore}</p>
-              </div>
-              <div>
-                <p className="text-[10px] text-text-muted uppercase">KW数</p>
-                <p className="text-lg font-bold font-mono text-text-primary">{site.keywords}</p>
+                <p className="text-lg font-bold font-mono text-text-primary">{site.readiness_score ?? "—"}</p>
               </div>
             </div>
 
             <div className="mt-4 pt-3 border-t border-border-light flex items-center justify-between">
-              <span className="text-[10px] text-text-muted">最終診断: {site.lastDiagnosed}</span>
+              <span className="text-[10px] text-text-muted">最終診断: {site.last_diagnosed_at ? formatDate(site.last_diagnosed_at) : "未実施"}</span>
               <Badge variant="success">アクティブ</Badge>
             </div>
           </Card>
@@ -86,11 +99,19 @@ export default function SitesPage() {
 
       <Dialog open={showAdd} onClose={() => setShowAdd(false)} title="サイト追加">
         <div className="space-y-4">
-          <Input id="site-url" label="サイトURL" placeholder="https://example.com" />
-          <Input id="site-name" label="サイト名（任意）" placeholder="例: コーポレートサイト" />
+          <Input id="site-url" label="サイトURL" placeholder="https://example.com" value={newUrl} onChange={(e) => setNewUrl(e.target.value)} />
+          <Input id="site-name" label="サイト名（任意）" placeholder="例: コーポレートサイト" value={newName} onChange={(e) => setNewName(e.target.value)} />
           <div className="flex gap-3 pt-2">
             <Button variant="outline" className="flex-1" onClick={() => setShowAdd(false)}>キャンセル</Button>
-            <Button className="flex-1" onClick={() => setShowAdd(false)}>追加して診断開始</Button>
+            <Button className="flex-1" disabled={addLoading || !newUrl} onClick={async () => {
+              await addSite({ url: newUrl, name: newName || undefined });
+              setShowAdd(false);
+              setNewUrl("");
+              setNewName("");
+              refetch();
+            }}>
+              {addLoading ? "追加中..." : "追加して診断開始"}
+            </Button>
           </div>
         </div>
       </Dialog>

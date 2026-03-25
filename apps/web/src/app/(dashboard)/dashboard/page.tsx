@@ -36,6 +36,7 @@ import {
   mockTopKeywords,
   mockActions,
 } from "@/lib/mock-data/dashboard";
+import { useFetch } from "@/hooks/use-fetch";
 
 const platformLines: Array<{ key: AIPlatform; color: string }> = [
   { key: "chatgpt", color: PLATFORM_META.chatgpt.color },
@@ -48,7 +49,19 @@ const platformLines: Array<{ key: AIPlatform; color: string }> = [
 
 const DEFAULT_PLATFORMS: AIPlatform[] = ["chatgpt", "gemini", "claude"];
 
+// Mock summary for useFetch fallback
+const mockSummary = {
+  geo_score: mockKPIs.geoScore.value,
+  readiness_score: mockKPIs.readiness.value,
+  weekly_mentions: mockKPIs.weeklyMentions.value,
+  active_keywords: mockKPIs.dominantKWs.total,
+  unread_alerts: 3,
+};
+
 export default function DashboardPage() {
+  const { data: summary } = useFetch("/dashboard/summary", mockSummary);
+  const { data: trends } = useFetch("/dashboard/trends", mockTrendData);
+
   const [activePlatforms, setActivePlatforms] = useState<Set<AIPlatform>>(
     new Set(DEFAULT_PLATFORMS),
   );
@@ -107,19 +120,19 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard
           label="総合GEOスコア"
-          value={mockKPIs.geoScore.value.toFixed(1)}
+          value={(summary?.geo_score ?? 0).toFixed(1)}
           unit="/100"
           change={mockKPIs.geoScore.change}
         />
         <KPICard
           label="GEO Readiness"
-          value={mockKPIs.readiness.value.toFixed(1)}
+          value={(summary?.readiness_score ?? 0).toFixed(1)}
           unit="/100"
           change={mockKPIs.readiness.change}
         />
         <KPICard
           label="週間AI言及数"
-          value={mockKPIs.weeklyMentions.value.toString()}
+          value={(summary?.weekly_mentions ?? 0).toString()}
           change={mockKPIs.weeklyMentions.change}
           suffix="件"
         />

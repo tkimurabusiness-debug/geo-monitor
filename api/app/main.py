@@ -41,22 +41,45 @@ app.include_router(reports.router)
 
 @app.on_event("startup")
 async def startup():
-    """Register AI providers on startup based on available API keys."""
+    """Register AI providers on startup.
+
+    Priority: API key → API provider, no key → Scraper fallback.
+    """
     from .services.providers import ProviderRegistry
     from .services.providers.openai_provider import ChatGPTProvider
     from .services.providers.gemini_provider import GeminiProvider, PerplexityProvider
     from .services.providers.anthropic_provider import ClaudeProvider
     from .services.providers.generic_provider import create_grok_provider, create_deepseek_provider
+    from .services.providers.chatgpt_scraper import ChatGPTScraperProvider
+    from .services.providers.gemini_scraper import GeminiScraperProvider
 
+    # ChatGPT: API優先、なければスクレイパー
     if settings.openai_api_key:
         ProviderRegistry.register(ChatGPTProvider())
+        print("[Providers] ChatGPT: API mode")
+    else:
+        ProviderRegistry.register(ChatGPTScraperProvider())
+        print("[Providers] ChatGPT: Scraper mode (no API key)")
+
+    # Gemini: API優先、なければスクレイパー
     if settings.google_ai_api_key:
         ProviderRegistry.register(GeminiProvider())
+        print("[Providers] Gemini: API mode")
+    else:
+        ProviderRegistry.register(GeminiScraperProvider())
+        print("[Providers] Gemini: Scraper mode (no API key)")
+
+    # Claude: APIのみ（スクレイパーなし）
     if settings.anthropic_api_key:
         ProviderRegistry.register(ClaudeProvider())
+        print("[Providers] Claude: API mode")
+
+    # Perplexity: APIのみ
     if settings.perplexity_api_key:
         ProviderRegistry.register(PerplexityProvider())
+        print("[Providers] Perplexity: API mode")
 
+    # Grok / DeepSeek: APIのみ
     if settings.xai_api_key:
         ProviderRegistry.register(create_grok_provider(settings.xai_api_key))
     if settings.deepseek_api_key:
