@@ -60,8 +60,16 @@ python scripts/save_browser_session.py gemini     # 同上
 
 ## 次にやるべきこと（優先順）
 
-### 1. スクレイパーログイン実行
-ChatGPTとGeminiにブラウザでログインしてセッション保存。上記コマンド実行。
+### 1. AIプラットフォームのAPIキー取得
+スクレイピングはCloudflareのボット検出でブロックされるため、APIキーが必要。
+
+**Gemini（最優先・無料）**: https://aistudio.google.com/apikey → APIキー取得（クレカ不要、30秒）
+→ `api/.env` の `GOOGLE_AI_API_KEY=` に設定
+
+**ChatGPT（任意）**: https://platform.openai.com/api-keys → APIキー取得（初回$5無料クレジット）
+→ `api/.env` の `OPENAI_API_KEY=` に設定
+
+※スクレイパーコードは骨格として保持。Cloudflare回避が解決すれば使える。
 
 ### 2. 残りのフロントページを実データ接続
 現状: dashboard, sites のみ接続済み。残り:
