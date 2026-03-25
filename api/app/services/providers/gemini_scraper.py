@@ -4,8 +4,11 @@ Uses headless Chromium to interact with gemini.google.com.
 """
 
 import asyncio
+from pathlib import Path
 from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeout
 from .base import AIProvider, AIResponse
+
+SESSION_FILE = Path(__file__).parent.parent.parent.parent / "sessions" / "gemini_session.json"
 
 
 class GeminiScraperProvider(AIProvider):
@@ -44,10 +47,14 @@ class GeminiScraperProvider(AIProvider):
                 headless=True,
                 args=["--no-sandbox", "--disable-blink-features=AutomationControlled"],
             )
-            context = await browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-                viewport={"width": 1280, "height": 800},
-            )
+            context_opts = {
+                "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+                "viewport": {"width": 1280, "height": 800},
+            }
+            if SESSION_FILE.exists():
+                context_opts["storage_state"] = str(SESSION_FILE)
+                print("[Gemini Scraper] Using saved session")
+            context = await browser.new_context(**context_opts)
             page = await context.new_page()
 
             try:
